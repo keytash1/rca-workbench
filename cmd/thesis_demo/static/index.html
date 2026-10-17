@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Диагностика распределённой системы</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/live.css">
+  <script src="/app.js" defer></script>
+  <script src="/workspace.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <header class="masthead">
+      <a class="identity" href="/" aria-label="Диагностика — главная">
+        <span><strong>Диагностика</strong><small>Расследование инцидентов</small></span>
+      </a>
+      <div class="system-state" role="status"><span id="readiness">Проверка подключения…</span></div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div>
+          <h1>Анализ инцидента</h1>
+          <p class="lead">Выберите систему и интервал. Приложение получит телеметрию и предложит порядок проверки сервисов.</p>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="Разделы">
+        <button class="tab active" data-tab="analysis" aria-current="page">Анализ инцидента</button>
+        <button class="tab" data-tab="evaluation">Эксперимент</button>
+        <button class="tab" data-tab="about">Справка</button>
+        <button id="history-shortcut" type="button" class="secondary-button" hidden>История расследований</button>
+      </nav>
+
+      <section id="analysis" class="view active" aria-label="Анализ инцидента">
+        <div class="analysis-grid">
+          <section class="card input-card" aria-label="Параметры запроса">
+            <h2>Параметры</h2>
+            <form id="diagnosis-form" novalidate>
+            <label for="profile-select">Подключённая система</label>
+            <select id="profile-select"><option value="">Загрузка профилей…</option></select>
+            <p id="profile-field-error" class="field-error" hidden></p>
+            <label for="start-time">Начало инцидента</label>
+            <input id="start-time" type="datetime-local" step="1">
+            <p id="start-field-error" class="field-error" hidden></p>
+            <label for="end-time">Конец интервала</label>
+            <input id="end-time" type="datetime-local" step="1">
+            <p id="end-field-error" class="field-error" hidden></p>
+            <div class="interval-presets" aria-label="Быстрый выбор интервала">
+              <button type="button" data-minutes="5">5 минут</button>
+              <button type="button" data-minutes="15">15 минут</button>
+              <button type="button" data-minutes="60">1 час</button>
+            </div>
+            <p id="time-hint" class="hint">Местное время компьютера.</p>
+            <label class="refresh-option"><input id="force-refresh" type="checkbox"> Перечитать источники</label>
+            <details class="request-details"><summary>Как обновляются данные</summary><p class="hint">Повторный результат может использоваться до 15 секунд. «Перечитать источники» создаёт новый снимок; сохранённые расследования не изменяются.</p></details>
+            <button id="analyze" type="submit" class="primary">Рассчитать рейтинг</button>
+            <p id="request-status" role="status" class="hint"></p>
+            <div id="analysis-error" class="error" role="alert" tabindex="-1" hidden></div>
+            </form>
+            <details class="replay-panel">
+              <summary>Контрольное воспроизведение</summary>
+              <p class="hint">Технический режим для повторения испытания. Не требуется при обычной работе.</p>
+              <label for="example-select">Сохранённый случай</label>
+              <select id="example-select"><option value="">Загрузка списка…</option></select>
+              <label for="incident-file">Канонический файл</label>
+              <input id="incident-file" type="file" accept=".json,application/json">
+              <button id="replay-analyze" class="secondary-button">Воспроизвести рейтинг</button>
+            </details>
+          </section>
+
+          <section class="card ranking-card">
+            <div class="ranking-title"><div><h2>Очередность проверки</h2><p id="incident-label" class="secondary">Результат появится после расчёта.</p></div><span id="candidate-count" class="count" hidden></span></div>
+            <div id="result-tools" hidden><button id="open-investigation" type="button" class="secondary-button" hidden>Расследовать</button><button id="export-result" class="secondary-button" hidden>Сохранить результат</button><details class="result-provenance"><summary>Сведения о расчёте</summary><dl id="result-provenance"></dl></details></div>
+            <p id="result-note" class="result-note" hidden>Выше в списке — раньше в проверке. Балл сравнивает сервисы в этом интервале и не является вероятностью отказа.</p>
+            <p id="coverage-warning" class="coverage-warning" role="status" hidden></p>
+            <div id="ranking" class="ranking"><div class="empty-state">После расчёта здесь появится полный рейтинг сервисов.</div></div>
+          </section>
+        </div>
+
+        <section id="service-detail" class="card detail-card" hidden>
+          <h2 id="detail-title" aria-live="polite">Наблюдения по выбранному сервису</h2>
+          <p class="secondary">Проверьте отклонения в исходной телеметрии выбранного сервиса и его зависимостей. Итоговый вывод о причине формулирует инженер.</p>
+          <div id="detail" class="detail-content"><div class="empty-state">Основания появятся после анализа.</div></div>
+        </section>
+        <section id="investigation-workspace" class="card investigation-card" hidden aria-labelledby="investigation-heading">
+          <div class="workspace-title"><div><h2 id="investigation-heading">Расследование</h2><p class="secondary">Сохраните наблюдения, проверьте гипотезы и зафиксируйте дальнейшие меры.</p></div><span id="investigation-state" role="status"></span></div>
+          <div id="investigation-error" class="error" role="alert" hidden></div>
+          <details id="workspace-details"><summary>Вопрос помощнику и карточка инженера</summary>
+          <p id="workspace-note" class="hint"></p>
+          <div id="investigation-start">
+            <label for="investigation-question">Симптомы и вопрос</label>
+            <textarea id="investigation-question" rows="3" maxlength="2000" placeholder="Что изменилось, какие запросы затронуты и что нужно проверить?"></textarea>
+            <div class="workspace-actions">
+              <button id="start-record" type="button" class="secondary-button" disabled>Создать карточку</button>
+              <button id="ask-assistant" type="button" class="secondary-button" disabled>Помощник расследования</button>
+              <button id="cancel-investigation" type="button" class="secondary-button" hidden>Остановить помощника</button>
+            </div>
+            <p id="assistant-policy-note" class="hint"></p>
+          </div>
+          <section id="assistant-outcome" class="assistant-outcome" aria-live="polite" hidden></section>
+          <form id="investigation-record" hidden>
+            <h3>Карточка инженера</h3>
+            <p class="hint">Ответ помощника не подтверждает причину и не изменяет эту карточку. Вывод и результат проверки фиксируете вы.</p>
+            <div class="record-grid">
+              <label>Название<input name="title" maxlength="200"></label>
+              <label>Владелец расследования<input name="meta_owner" maxlength="200"></label>
+              <label class="wide-field">Вывод инженера<textarea name="conclusion" rows="3" maxlength="2000"></textarea></label>
+            </div>
+            <details class="record-context"><summary>Симптомы, хронология и гипотезы</summary>
+            <div class="record-grid">
+              <label>Инцидент / тикет<input name="meta_incident" maxlength="200"></label>
+              <label>Категория для обзора повторов<input name="meta_category" maxlength="100"></label>
+              <label>Влияние на систему<textarea name="impact" rows="2" maxlength="2000"></textarea></label>
+              <label>Симптомы<textarea name="symptoms" rows="3" maxlength="2000"></textarea></label>
+            </div>
+            <h4>Хронология</h4><div id="record-timeline"></div>
+            <button id="add-timeline" class="secondary-button" type="button">Добавить событие</button>
+            <h4>Гипотезы и причины</h4><div id="record-causes"></div>
+            <button id="add-cause" class="secondary-button" type="button">Добавить гипотезу</button>
+            </details>
+            <h4>Дальнейшие меры</h4><div id="record-actions"></div>
+            <button id="add-action" class="secondary-button" type="button">Добавить меру</button>
+            <div class="workspace-actions record-save"><button type="submit" class="secondary-button">Сохранить карточку</button><button id="review-record" type="button" class="secondary-button">Отметить проверку карточки</button><button id="export-investigation" type="button" class="secondary-button">Экспорт расследования</button><span id="record-save-state" class="hint" role="status"></span></div>
+            <label>Формат экспорта<select id="export-format"><option value="json">JSON — полный снимок и история</option><option value="markdown">Markdown — сводка для команды</option></select></label>
+            <p id="export-download" class="hint" role="status" hidden></p>
+            <p id="record-review-state" class="hint" role="status"></p>
+          </form>
+          </details>
+          <details id="investigation-history"><summary>Сохранённые расследования</summary>
+            <p class="hint">Обзор ваших записей, не автоматическое выявление повторных причин. Сервис ищется в записанных инженером гипотезах и мерах, не в ML-рейтинге. История хранится в пределах установленного срока.</p>
+            <div class="record-grid">
+              <label>Система (ID профиля)<input id="history-project" maxlength="128"></label>
+              <label>Сервис в записях инженера<input id="history-service" maxlength="200"></label>
+              <label>Категория<input id="history-category" maxlength="100"></label>
+              <label>Состояние мер<select id="history-action_status"><option value="">Любое</option><option value="proposed">Предложены</option><option value="planned">Запланированы</option><option value="in_progress">В работе</option><option value="verification_pending">Ожидают проверки</option><option value="verified">Эффект проверен</option><option value="not_verified">Эффект не подтверждён</option><option value="overdue">Просрочены и открыты</option></select></label>
+              <label>Карточка создана не раньше<input id="history-after" type="datetime-local"></label>
+              <label>Карточка создана не позже<input id="history-before" type="datetime-local"></label>
+            </div>
+            <div class="workspace-actions"><button id="history-apply" type="button" class="secondary-button">Применить фильтры</button><button id="history-reset" type="button" class="secondary-button">Сбросить</button></div>
+            <div id="investigation-list"></div>
+          </details>
+        </section>
+      </section>
+
+      <section id="evaluation" class="view" aria-label="Проверка качества">
+        <div class="page-heading"><div class="section-index">НЕЗАВИСИМОЕ ИСПЫТАНИЕ</div><h2>Проверка на другой программной системе</h2><p class="secondary">После выбора метода на DeathStarBench Social Network ансамбль был применён к OpenTelemetry Astronomy Shop без изменения весов. Это оценка качества метода, а не тест веб-интерфейса.</p></div>
+        <div id="metrics" class="metrics"></div>
+        <div class="card text-card"><h3>Границы вывода</h3><ul id="limitations"></ul><p>Результаты получены для 50 контролируемых инцидентов. Они не подтверждают эксплуатационную надёжность, универсальный перенос или сокращение времени расследования.</p></div>
+      </section>
+
+      <section id="about" class="view" aria-label="Как устроена система">
+        <div class="page-heading"><div class="section-index">ПУТЬ ДАННЫХ</div><h2>От наблюдений к рейтингу</h2><p class="secondary">Для выбранной системы приложение получает телеметрию за заданный интервал, сопоставляет её со здоровым состоянием и применяет зафиксированный ансамбль.</p></div>
+        <div class="process">
+          <div class="process-step"><span>01</span><h3>Наблюдения</h3><p>Метрики, трассировки, состав сервисов и границы окна.</p></div>
+          <div class="process-step"><span>02</span><h3>Признаки</h3><p>Отклонения, связи вызовов, исчезновение ожидаемой активности и полнота данных.</p></div>
+          <div class="process-step"><span>03</span><h3>Ранжирование</h3><p>Пять обученных экземпляров LambdaMART оценивают всех кандидатов; их оценки усредняются.</p></div>
+          <div class="process-step"><span>04</span><h3>Проверка</h3><p>Инженер изучает основания и сверяет гипотезу с исходной телеметрией.</p></div>
+        </div>
+        <div class="card text-card"><h3>Подключение системы</h3><p>Интегратор задаёт профиль источников и строит базовое состояние по нормальной работе. Файлы обученной модели не изменяются. При изменении состава сервисов, инструментирования или режима нагрузки необходимо проверить профиль и подготовить новую версию базового состояния.</p></div>
+      </section>
+    </main>
+
+    <footer>Источники используются только для чтения. Приложение не изменяет состояние сервисов.</footer>
+  </div>
+</body>
+</html>

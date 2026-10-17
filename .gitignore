@@ -1,0 +1,7 @@
+.rca-private/
+.venv*/
+__pycache__/
+*.egg-info/
+.ruff_cache/
+deploy/profiles/*.json
+deploy/profiles/artifacts/
