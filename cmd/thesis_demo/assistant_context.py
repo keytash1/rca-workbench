@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+from baseline_applicability import context_projection as baseline_context
 
 
 def assistant_context(catalog, *, ranking=None, summary_only=False):
@@ -129,6 +130,10 @@ def assistant_context(catalog, *, ranking=None, summary_only=False):
             "observations_included": len(facts),
             "candidates_included": len(services),
         }
+    applicability = baseline_context(catalog["source_quality"].get("baseline_applicability"),
+                                     catalog["start_unix"], catalog["end_unix"], catalog["requests_per_second"])
+    if applicability is not None:
+        result["source_quality"]["baseline_applicability"] = applicability
     if ranking is not None:
         if (
             not isinstance(ranking, list)

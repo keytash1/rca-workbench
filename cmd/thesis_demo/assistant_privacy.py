@@ -73,6 +73,11 @@ def prepare_outbound_aggregates(catalog, *, ranking=None, include_details=False)
         "sampling": "UNKNOWN",
         "retention": "UNKNOWN",
     }
+    applicability = projected["source_quality"].get("baseline_applicability")
+    if applicability is not None:
+        # assistant_context reconstructs this numeric/enum-only structure. No
+        # arbitrary provenance text, URLs or credentials enter the projection.
+        clean["source_quality"]["baseline_applicability"] = applicability
     fact_ids, identities = {}, set()
     ordered = sorted(
         projected["observations"],
