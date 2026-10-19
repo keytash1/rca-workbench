@@ -81,6 +81,11 @@ class ProductHTTPTests(unittest.TestCase):
                 with urlopen(base+f"/api/v2/analyses/{result['result_id']}/evidence") as response:
                     catalog = json.load(response)
                 self.assertEqual(catalog["input_sha256"],result["input_sha256"])
+                check = catalog["source_quality"]["baseline_applicability"]
+                self.assertEqual(check["temporal_relation"], "OVERLAPS")
+                self.assertEqual(check["reference_rps"], 4)
+                self.assertIn("CURRENT_LOAD_CONFIGURED_NOT_MEASURED", check["reasons"])
+                self.assertEqual(result["source_status"]["workload_source"], "profile_constant")
                 with patch.object(FakeTelemetry,"fail_metrics",True):
                     with self.assertRaises(HTTPError) as failure:
                         post()

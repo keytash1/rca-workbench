@@ -483,6 +483,7 @@ def collect(profile: LiveProfile, start: float, end: float) -> tuple[dict, dict]
         "services_without_spans": sorted(set(profile.services) - {span["service"] for span in traces}),
         "annotations": annotations,
         "collected_at_unix": collected_at,
+        "workload_source": "profile_constant" if profile.fixed_rps is not None else "measured_interval_mean",
         "query_step_seconds": profile.query_step_seconds,
         "trace_api": profile.trace_contract,
         "trace_tested_version": profile.trace_version,

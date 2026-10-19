@@ -211,6 +211,7 @@ function renderEvidence(service, detail) {
     section.append(textElement('p', state.catalogStatus || 'Загрузка наблюдений…', 'secondary'));
     detail.append(section); return;
   }
+  renderBaselineApplicability(section, state.catalog.source_quality?.baseline_applicability);
   const names = {cpu: 'CPU', memory: 'Память', network: 'Сетевой обмен', traffic_rate: 'Входящий трафик'};
   for (const fact of state.catalog.observations.filter(item => item.service === service && item.kind === 'metric')) {
     const value = fact.values;
@@ -284,6 +285,33 @@ function renderEvidence(service, detail) {
   } else section.append(textElement('p', 'По этим правилам отдельный проверочный шаг не выделен. Отсутствие рекомендации не подтверждает здоровье сервиса.'));
   section.append(textElement('p', 'Предложенные шаги ещё не выполнены. Наблюдаемые связи и отклонения сами по себе не устанавливают причину.', 'detail-note'));
   detail.append(section);
+}
+
+function renderBaselineApplicability(parent, assessment) {
+  if (!assessment) return; // Earlier saved snapshots remain readable.
+  const box = document.createElement('details'); box.className = 'baseline-applicability';
+  box.append(textElement('summary', assessment.state === 'REVIEW_REQUIRED'
+    ? 'Здоровое состояние: требуется проверка сопоставимости'
+    : 'Здоровое состояние: сопоставлена опорная нагрузка'));
+  const notes = {
+    HEALTHY_PERIOD_UNKNOWN: 'Не указан здоровый период. Проверьте происхождение базового состояния.',
+    HEALTHY_PERIOD_AFTER: 'Здоровый период находится после выбранного интервала. Он не является предшествующим эталоном этого инцидента.',
+    HEALTHY_PERIOD_OVERLAPS: 'Здоровый период пересекается с выбранным интервалом. Проверьте, что в него не попало влияние инцидента.',
+    REFERENCE_LOAD_UNKNOWN: 'Нагрузка здорового периода не записана в этой версии профиля.',
+    REFERENCE_LOAD_CONFIGURED_NOT_MEASURED: 'Нагрузка здорового периода задана интегратором, а не измерена источником.',
+    CURRENT_LOAD_SOURCE_UNKNOWN: 'Происхождение текущей интенсивности нагрузки не установлено.',
+    CURRENT_LOAD_CONFIGURED_NOT_MEASURED: 'Текущая нагрузка задана константой профиля. Фактическое изменение трафика ею не измеряется.',
+    LOAD_DIFFERS_FROM_SINGLE_REFERENCE: 'Текущая интенсивность отличается от опорной. Проверьте прогноз метрик при изменившемся режиме работы.',
+    CURRENT_LOAD_UNKNOWN: 'Текущую интенсивность нагрузки не удалось сопоставить.',
+  };
+  const reasons = assessment.reasons || [];
+  if (reasons.some(reason => ['HEALTHY_PERIOD_AFTER', 'HEALTHY_PERIOD_OVERLAPS', 'LOAD_DIFFERS_FROM_SINGLE_REFERENCE'].includes(reason))) box.open = true;
+  const number = value => Number(value).toLocaleString('ru-RU', {maximumSignificantDigits: 6});
+  if (assessment.reference_rps != null && assessment.current_rps != null)
+    box.append(textElement('p', `Опорная интенсивность: ${number(assessment.reference_rps)} запросов/с; текущая: ${number(assessment.current_rps)} запросов/с.`));
+  for (const reason of reasons) if (notes[reason]) box.append(textElement('p', notes[reason]));
+  box.append(textElement('p', 'Сравнение с одной опорной нагрузкой не подтверждает качество модели на всех режимах. Рейтинг не изменён; это не вероятность причины.', 'detail-note'));
+  parent.append(box);
 }
 
 async function loadEvidence(result) {

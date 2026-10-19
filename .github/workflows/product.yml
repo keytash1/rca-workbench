@@ -19,7 +19,11 @@ jobs:
           PYTHONPATH: ml:cmd/thesis_demo
         run: python -c 'from openapi_spec_validator import validate; from api_contract import document; validate(document())'
       - name: Workspace restoration validation regression
-        run: node --test cmd/thesis_demo/test_workspace_ui_restore.mjs
+        run: node --test cmd/thesis_demo/test_*.mjs
+      - name: Operator-only context probe contract, no external source
+        env:
+          PYTHONPATH: tools
+        run: python -m unittest discover -s tools -p 'test_*.py' -q
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 20

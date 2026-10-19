@@ -24,6 +24,16 @@ LIVE_INPUT = obj({"profile_id": {"type": "string", "minLength": 1},
 LIVE_INPUT["description"] = "Unix seconds UTC; end > start, duration <= 3600 s, end not in future. Both metric boundaries inclusive."
 
 SCHEMAS = {
+    "BaselineApplicability": obj({
+        "version": {"const": "baseline-applicability-v1"},
+        "state": {"enum": ["REVIEW_REQUIRED", "REFERENCE_ONLY"]},
+        "temporal_relation": {"enum": ["UNKNOWN", "PRECEDES", "AFTER", "OVERLAPS"]},
+        **{name: {"type": ["number", "null"]} for name in ("healthy_start_unix", "healthy_end_unix", "reference_rps", "current_rps", "rps_ratio")},
+        **{name: {"enum": ["unknown", "profile_constant", "measured_interval_mean"]} for name in ("reference_source", "current_source")},
+        "load_relation": {"enum": ["UNKNOWN", "SAME_REFERENCE_RPS", "DIFFERENT_REFERENCE_RPS"]},
+        "reasons": ARRAY_STRING,
+        "meaning": {"const": "PROVENANCE_CHECK_NOT_MODEL_CONFIDENCE_OR_CAUSAL_PROOF"},
+    }, ("version", "state", "temporal_relation", "healthy_start_unix", "healthy_end_unix", "reference_rps", "current_rps", "rps_ratio", "reference_source", "current_source", "load_relation", "reasons", "meaning")),
     "LiveAnalysisRequest": LIVE_INPUT,
     "AnalysisRequest": {"oneOf": [ref("LiveAnalysisRequest"),
         obj({"example_id": STRING}, ("example_id",)),
@@ -106,7 +116,7 @@ SCHEMAS = {
         "input_sha256": HASH, "baseline_sha256": HASH, "feature_schema_sha256": HASH,
         "model_version": STRING, "start_unix": NUMBER, "end_unix": NUMBER,
         "services": ARRAY_STRING, "requests_per_second": NUMBER,
-        "source_quality": {"type": "object"}, "limitations": ARRAY_STRING,
+        "source_quality": obj({"baseline_applicability": ref("BaselineApplicability")}, extra=True), "limitations": ARRAY_STRING,
         "observations": {"type": "array", "items": ref("Observation")},
         "checks": {"type": "array", "items": obj({"service": STRING, "code": STRING,
             "evidence_ids": ARRAY_STRING, "text": STRING, "status": {"const": "PROPOSED_NOT_EXECUTED"}},
