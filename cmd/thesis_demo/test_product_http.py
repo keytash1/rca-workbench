@@ -6,6 +6,7 @@ connection checks or the research ranking regression.
 """
 
 import json
+from dataclasses import replace
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 import tempfile
@@ -86,6 +87,18 @@ class ProductHTTPTests(unittest.TestCase):
                 self.assertEqual(check["reference_rps"], 4)
                 self.assertIn("CURRENT_LOAD_CONFIGURED_NOT_MEASURED", check["reasons"])
                 self.assertEqual(result["source_status"]["workload_source"], "profile_constant")
+                app.profiles['synthetic'] = replace(app.profiles['synthetic'], context_config={
+                    'source_id':'unit','url':'http://127.0.0.1:1','service_label':'service_name',
+                    'services':{'frontend':'frontend'},'labels':{}})
+                with patch('server.collect_context', side_effect=TimeoutError):
+                    degraded = app.analyze_live('synthetic',left,left+30,force_refresh=True)
+                self.assertEqual(degraded['candidates'],result['candidates'])
+                self.assertEqual(degraded['input_sha256'],result['input_sha256'])
+                self.assertEqual(degraded['source_status']['incident_context']['services']['frontend'],'unavailable')
+                with patch('server.collect_context', return_value={}), patch('server.attach_context', side_effect=ValueError):
+                    projection_failure = app.analyze_live('synthetic',left,left+30,force_refresh=True)
+                self.assertEqual(projection_failure['candidates'],result['candidates'])
+                self.assertEqual(projection_failure['source_status']['incident_context']['status'],'projection_unavailable')
                 with patch.object(FakeTelemetry,"fail_metrics",True):
                     with self.assertRaises(HTTPError) as failure:
                         post()

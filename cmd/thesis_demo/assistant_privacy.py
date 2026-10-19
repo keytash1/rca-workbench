@@ -66,6 +66,9 @@ def prepare_outbound_aggregates(catalog, *, ranking=None, include_details=False)
         ],
     }
     trace_status = projected["source_quality"].get("traces")
+    for marker in ("INCIDENT_CONTEXT_NOT_DISCLOSED_TO_ASSISTANT", "CONTEXT_IS_BOUNDED_SOURCE_ASSERTIONS_NOT_PROOF"):
+        if marker in projected["limitations"]:
+            clean["limitations"].append(marker)
     if trace_status not in {"available", "unavailable", "REPLAY_STATUS_UNKNOWN"}:
         raise PrivacyError("OUTBOUND_TRACE_STATUS_INVALID")
     clean["source_quality"] = {
@@ -226,6 +229,11 @@ def prepare_outbound_aggregates(catalog, *, ranking=None, include_details=False)
                         "observed_edges": _number(edge["observed_edges"], count=True),
                     }
                 )
+        elif kind == "context":
+            from context_catalog import assistant_projection
+            value = assistant_projection(values)
+            if value is None:
+                raise PrivacyError("OUTBOUND_CONTEXT_NOT_APPROVED")
         else:
             raise PrivacyError("OUTBOUND_KIND_INVALID")
         clean["observations"].append(
@@ -256,4 +264,6 @@ def prepare_outbound_aggregates(catalog, *, ranking=None, include_details=False)
         if include_details
         else "aggregate-egress-v3-source-timings-summary",
     }
+    if any(f["kind"] == "context" for f in catalog["observations"]):
+        local_mapping["privacy_version"] = "aggregate-egress-v4-incident-context"
     return clean, hint, local_mapping

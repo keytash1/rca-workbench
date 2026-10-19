@@ -24,6 +24,12 @@ LIVE_INPUT = obj({"profile_id": {"type": "string", "minLength": 1},
 LIVE_INPUT["description"] = "Unix seconds UTC; end > start, duration <= 3600 s, end not in future. Both metric boundaries inclusive."
 
 SCHEMAS = {
+    "IncidentContextStatus": obj({
+        "services": {"type":"object", "additionalProperties":{"enum":["available", "truncated", "unavailable", "not_configured"]}},
+        "assistant_categories_enabled":{"type":"boolean"},
+        "raw_fields_disclosure":{"const":"LOCAL_ONLY"},
+        "status":{"const":"projection_unavailable"},
+    }),
     "BaselineApplicability": obj({
         "version": {"const": "baseline-applicability-v1"},
         "state": {"enum": ["REVIEW_REQUIRED", "REFERENCE_ONLY"]},
@@ -76,6 +82,9 @@ SCHEMAS = {
             "reason": STRING, "profile_contract_sha256": HASH,
             "healthy_end_unix": {"type": ["number", "null"]}}, ("state", "reason")),
         "elapsed_seconds": {"type": "number", "minimum": 0},
+        "workload_source":{"enum":["profile_constant", "measured_interval_mean"]},
+        "incident_context":ref("IncidentContextStatus"),
+        "context_collection_seconds":{"type":"number", "minimum":0},
     }, ("metrics", "traces", "trace_error", "metric_families_by_service", "metric_point_coverage",
         "metric_sample_count", "span_count", "services_without_spans", "annotations", "collected_at_unix",
         "query_step_seconds", "trace_api", "trace_tested_version", "trace_query_services", "input_sha256", "elapsed_seconds")),
@@ -104,13 +113,13 @@ SCHEMAS = {
                     "candidate_count": {"type": "integer", "minimum": 1}, "status": {"const": "configured"}},
                    ("id", "title", "version", "candidate_count", "status")),
     "Observation": obj({"id": {"type": "string", "pattern": "^obs-[0-9a-f]{32}$"},
-        "service": STRING, "kind": {"enum": ["metric", "traces", "dependencies"]},
+        "service": STRING, "kind": {"enum": ["metric", "traces", "dependencies", "context"]},
         "start_unix": NUMBER, "end_unix": NUMBER, "values": {"type": "object"},
         "source_links": {"type": "array", "items": obj({"kind": STRING,
             "url": {"type": "string", "format": "uri"}}, ("kind", "url"))}},
         ("id", "service", "kind", "start_unix", "end_unix", "values", "source_links")),
     "EvidenceCatalog": obj({"schema_version": {"const": "2.0"},
-        "catalog_version": {"enum": ["evidence-v1", "evidence-v2-source-timings"]},
+        "catalog_version": {"enum": ["evidence-v1", "evidence-v2-source-timings", "evidence-v3-incident-context"]},
         "analysis_id": {"type": "string", "format": "uuid"},
         "profile_id": {"type": ["string", "null"]}, "profile_version": {"type": ["string", "null"]},
         "input_sha256": HASH, "baseline_sha256": HASH, "feature_schema_sha256": HASH,

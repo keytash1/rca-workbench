@@ -30,6 +30,15 @@ def result(identifier="one"):
 
 
 class RequestTests(unittest.TestCase):
+    def test_degraded_optional_context_is_not_reused_as_fresh(self):
+        requests = AnalysisRequests(); calls=[]
+        def compute():
+            calls.append(1); value=result(str(len(calls)))
+            value['source_status']['incident_context']={'services':{'a':'unavailable'}}
+            return value
+        self.assertEqual(requests.run('scope',compute)['result_id'],'1')
+        self.assertEqual(requests.run('scope',compute)['result_id'],'2')
+
     def test_cache_refresh_ttl_delete_and_copy_isolation(self):
         requests = AnalysisRequests(ttl=10)
         calls = []
