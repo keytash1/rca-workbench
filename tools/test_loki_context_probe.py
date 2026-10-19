@@ -46,7 +46,7 @@ class ContextTests(unittest.TestCase):
         for result in (denied, network):
             self.assertEqual(result["status"], "available")
             self.assertEqual(result["completeness"], "NOT_ESTABLISHED")
-            self.assertEqual(result["assistant_disclosure"], "DISABLED_NOT_IN_ASSISTANT_TOOLS")
+            self.assertEqual(result["assistant_disclosure"], "RAW_FIELDS_LOCAL_ONLY")
             self.assertNotIn("SECRET", json.dumps(result))
             self.assertNotIn("root_cause", result)
         self.assertNotEqual(denied["records"][0]["fields"], network["records"][0]["fields"])

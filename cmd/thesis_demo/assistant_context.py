@@ -6,6 +6,7 @@ import copy
 import json
 import math
 from baseline_applicability import context_projection as baseline_context
+from context_catalog import assistant_projection as context_projection
 
 
 def assistant_context(catalog, *, ranking=None, summary_only=False):
@@ -100,6 +101,11 @@ def assistant_context(catalog, *, ranking=None, summary_only=False):
                 pick(edge, ("source", "target", "observed_edges"))
                 for edge in value["edges"]
             ]
+        elif fact["kind"] == "context":
+            projection = context_projection(value)
+            if projection is None:
+                continue  # Raw context stays local without explicit operator opt-in.
+            clean["values"] = projection
         else:
             raise ValueError("unsupported assistant observation kind")
         facts.append(clean)
@@ -123,6 +129,8 @@ def assistant_context(catalog, *, ranking=None, summary_only=False):
         "observations": sorted(facts, key=lambda f: (f["service"], f["kind"], f["id"])),
         "limitations": list(catalog["limitations"]),
     }
+    if any(f["kind"] == "context" and f["values"].get("assistant_categories_enabled") is not True for f in catalog["observations"]):
+        result["limitations"].append("INCIDENT_CONTEXT_NOT_DISCLOSED_TO_ASSISTANT")
     if summary_only:
         result["projection"] = {
             "kind": "all_candidate_summaries",

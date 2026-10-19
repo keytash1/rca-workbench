@@ -150,6 +150,7 @@ class LiveProfile:
     trace_contract: str = "jaeger-http-json"
     trace_version: str = "unspecified"
     semantic_map: dict | None = None
+    context_config: dict | None = None
 
     @classmethod
     def load(cls, path: Path, root: Path, *, require_artifacts: bool = True) -> "LiveProfile":
@@ -226,7 +227,13 @@ class LiveProfile:
             trace_contract=trace_contract,
             trace_version=str(trace.get("tested_version", "unspecified")),
             semantic_map=semantic_map,
+            context_config=raw.get("context"),
         )
+        if profile.context_config is not None:
+            from context_source import LokiContextSource
+            LokiContextSource(profile.context_config)
+            if not set(profile.context_config["services"]) <= set(services):
+                raise ValueError("context services must belong to profile candidates")
         if require_artifacts:
             baseline_binding(profile)
         return profile

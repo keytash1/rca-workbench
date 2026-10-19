@@ -31,7 +31,7 @@ RUNTIME_MODULES = (
 APPLICATION_MODULES = (
     "server", "live_sources", "profile_runtime", "runtime_assets", "api_contract",
     "api_errors", "evidence_catalog", "assistant_context", "profile_check", "profile_setup",
-    "trace_adapters", "profile_contract", "profile_onboarding", "analysis_requests", "trace_evidence", "baseline_applicability",
+    "trace_adapters", "profile_contract", "profile_onboarding", "analysis_requests", "trace_evidence", "baseline_applicability", "context_source", "context_catalog",
 )
 WORKSPACE_MODULES = (
     "workspace_store", "workspace_http", "investigations", "runbook_corpus",
