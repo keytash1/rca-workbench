@@ -50,9 +50,13 @@ PYTHONPATH=ml:cmd/thesis_demo .venv/bin/python cmd/thesis_demo/server.py \
 Для локальной Python-установки прогрейте публичный словарь отдельно:
 
 ```bash
+export TIKTOKEN_CACHE_DIR="$PWD/.rca-private/tokenizer-cache"
 .venv-assistant/bin/python -c 'import tiktoken; tiktoken.get_encoding("o200k_base")'
 ```
 
+Запускайте сервер с тем же `TIKTOKEN_CACHE_DIR` (путь не содержит ключей).
+Worker наследует только эту настройку публичного словаря, не остальные
+переменные окружения. В optional-контейнере путь уже задан при сборке.
 Worker проверяет SHA словаря и не скачивает его во время задания. Без него
 работает более строгая байтовая оценка; большой вход может быть отклонён до
 вызова модели. Optional-контейнер включает проверенный публичный словарь.
