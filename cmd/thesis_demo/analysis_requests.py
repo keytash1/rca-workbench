@@ -112,6 +112,10 @@ class AnalysisRequests:
             if context is not None:
                 usable = usable and bool(context.get("services")) and all(
                     s == "available" for s in context.get("services", {}).values())
+            http = status.get("http_observations")
+            if http is not None:
+                usable = usable and http.get("status") == "complete" and bool(http.get("services")) and all(
+                    s in {"OBSERVED", "NO_ACTIVITY"} for s in http.get("services", {}).values())
             with self._lock:
                 if (
                     usable

@@ -30,6 +30,20 @@ def result(identifier="one"):
 
 
 class RequestTests(unittest.TestCase):
+    def test_http_partial_is_not_cached_but_observed_idle_is(self):
+        for status, state, expected in [('partial', 'PARTIAL', False),
+                                        ('unavailable', 'UNAVAILABLE', False),
+                                        ('complete', 'NO_ACTIVITY', True),
+                                        ('complete', 'OBSERVED', True)]:
+            with self.subTest(status=status, state=state):
+                requests = AnalysisRequests()
+                def compute():
+                    value = result()
+                    value['source_status']['http_observations'] = {'status':status, 'services':{'a':state}}
+                    return value
+                requests.run('scope', compute)
+                self.assertEqual(requests.run('scope', compute)['delivery']['cache_hit'], expected)
+
     def test_degraded_optional_context_is_not_reused_as_fresh(self):
         requests = AnalysisRequests(); calls=[]
         def compute():
