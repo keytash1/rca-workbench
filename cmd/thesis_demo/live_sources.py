@@ -151,6 +151,7 @@ class LiveProfile:
     trace_version: str = "unspecified"
     semantic_map: dict | None = None
     context_config: dict | None = None
+    http_observations_config: dict | None = None
 
     @classmethod
     def load(cls, path: Path, root: Path, *, require_artifacts: bool = True) -> "LiveProfile":
@@ -228,12 +229,18 @@ class LiveProfile:
             trace_version=str(trace.get("tested_version", "unspecified")),
             semantic_map=semantic_map,
             context_config=raw.get("context"),
+            http_observations_config=raw.get("http_observations"),
         )
         if profile.context_config is not None:
             from context_source import LokiContextSource
             LokiContextSource(profile.context_config)
             if not set(profile.context_config["services"]) <= set(services):
                 raise ValueError("context services must belong to profile candidates")
+        if profile.http_observations_config is not None:
+            from http_observations import MAX_SERVICES, validate_config
+            validate_config(profile.http_observations_config)
+            if len(services) > MAX_SERVICES:
+                raise ValueError("optional HTTP observations support at most 64 services")
         if require_artifacts:
             baseline_binding(profile)
         return profile

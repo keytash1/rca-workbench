@@ -17,7 +17,8 @@ from assistant_context import assistant_context
 
 TOOL_VERSION = "snapshot-tools-v1"
 MAX_TOOL_BYTES = 12 * 1024
-FAMILIES = ("cpu", "memory", "network", "traffic_rate")
+FAMILIES = ("cpu", "memory", "network", "traffic_rate",
+            "http_request_rate", "http_error_ratio", "http_latency_p95")
 TOPICS = ("cpu", "memory", "network", "traffic_rate", "traces", "coverage", "baseline")
 
 
